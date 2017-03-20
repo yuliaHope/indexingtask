@@ -26,7 +26,7 @@ def init_mode(argv):
 
 
 def is_power_of_two(x):
-    if (x >= 1024 or x <= 1024 * 1024) and (x & (x - 1)) == 0:
+    if (x >= 1024 and x <= 1024 * 1024) and (x & (x - 1)) == 0:
         return x
     else:
         raise ValueError(str(x) + ' is not power of 2 or bigger/smaller than 1Mb/1Kb')

@@ -1,4 +1,4 @@
-from multiprocessing import Pool, cpu_count
+from multiprocessing import Pool
 import time
 import sys
 import validation
@@ -20,7 +20,8 @@ def collect_results(res):
 
 def read_and_hash_async(path_to_file, block_size, method, chunks_count):
     global async_hashes_list
-    pool = Pool(9)
+    # on default sets cpu_count
+    pool = Pool()
     i = 0
 
     async_hashes_list = [None] * chunks_count
@@ -36,15 +37,15 @@ def read_and_hash_async(path_to_file, block_size, method, chunks_count):
     pool.join()
     end_time = time.time() - start_time
     print('read and hash in async mode: ' + str(end_time))
-    print('hashing speed in async mode: ' + str(end_time / chunks_count / 9))
+    print('hashing speed in async mode: ' + str(chunks_count * block_size / (1024*1024) / end_time) + ' Mb/sec')
     f_read.close()
-    file_utils.write(async_hashes_list, path_to_file, method, 'async')
+    file_utils.write(async_hashes_list, path_to_file, method)
 
 
 def read_and_hash_sync(path_to_file, block_size, method, chunks_count):
     f_read = open(path_to_file, 'rb')
-    new_file_name = path_to_file + '.hashes_' + method.lower() + '_sync'
-    f_write = open(new_file_name, 'a')
+    new_file_name = path_to_file + '.hashes_' + method.lower()
+    f_write = open(new_file_name, 'w')
     start_time = time.time()
     while True:
         chunk = f_read.read(block_size)
@@ -55,20 +56,23 @@ def read_and_hash_sync(path_to_file, block_size, method, chunks_count):
     f_read.close()
     end_time = time.time() - start_time
     print('read and hash in sync mode: ' + str(end_time))
-    print('hashing speed in sync mode: ' + str(end_time / chunks_count))
+    print('hashing speed in sync mode: ' + str(chunks_count * block_size / (1024*1024) / end_time) + ' Mb/sec')
 
 
 def main(argv):
-    path_to_file = validation.file_is_exist(argv[1])
-    block_size = validation.is_power_of_two(int(argv[2]))
-    method = validation.method_is_correct(argv[3])
-    mode = validation.init_mode(argv)
-    chunks_count = int(file_utils.file_size(path_to_file) / block_size) + 1
+    try:
+        path_to_file = validation.file_is_exist(argv[1])
+        block_size = validation.is_power_of_two(int(argv[2]))
+        method = validation.method_is_correct(argv[3])
+        mode = validation.init_mode(argv)
+        chunks_count = int(file_utils.file_size(path_to_file) / block_size) + 1
 
-    if mode.upper() == 'SYNC':
-        read_and_hash_sync(path_to_file, block_size, method, chunks_count)
-    else:
-        read_and_hash_async(path_to_file, block_size, method, chunks_count)
+        if mode.upper() == 'SYNC':
+            read_and_hash_sync(path_to_file, block_size, method, chunks_count)
+        else:
+            read_and_hash_async(path_to_file, block_size, method, chunks_count)
+    except IndexError:
+        print('IndexError exception. Invalid argv count')
 
 
 if __name__ == "__main__":
